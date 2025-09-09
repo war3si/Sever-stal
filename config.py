@@ -8,3 +8,5 @@ EVENT_DAYS = 5
 
 # Для симуляции /nextday (виртуальный сдвиг дней)
 simulated_day_offset = 0  # Глобальная переменная для теста
+
+PODCAST_URL = "https://t.me/your_podcast_channel/1"

@@ -6,7 +6,6 @@ DB_FILE = 'db.sqlite'
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    # Важно: никаких # внутри SQL!
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
