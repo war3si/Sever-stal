@@ -52,9 +52,9 @@ def fun_test_kb(q: dict) -> types.InlineKeyboardMarkup:
     ]
     return types.InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def disc_result_kb() -> types.InlineKeyboardMarkup:
+def disc_result_kb(share_text: str) -> types.InlineKeyboardMarkup:
     return types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="🔗 Поделиться", switch_inline_query="Мой коммуникационный профиль:")],
+        [types.InlineKeyboardButton(text="🔗 Поделиться", switch_inline_query=share_text)],
         [types.InlineKeyboardButton(text="🔄 Пройти другой тест", callback_data="day1:choose_again")],
         [types.InlineKeyboardButton(text="🎧 Послушать подкаст (5 мин)", url=PODCAST_URL)],
     ])

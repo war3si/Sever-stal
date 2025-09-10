@@ -1,7 +1,10 @@
 import logging
+import uuid
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
+
 
 from config import EVENT_DAYS, ADMINS
 import db
@@ -120,7 +123,8 @@ async def show_disc_result(message: types.Message, state: FSMContext):
         f"<b>Три практических совета:</b>\n{tips_text}"
     )
     
-    await message.answer(result_message, reply_markup=keyboards.disc_result_kb())
+    share_text = f"Мой коммуникационный профиль по DiSC — {result['title']}. А какой у тебя? Пройди тест в боте «Неделя знаний Северсталь»!"
+    await message.answer(result_message, reply_markup=keyboards.disc_result_kb(share_text))
     
     # Показываем мотивационную карточку
     motivational_card = texts.get_motivational_card(profile)
@@ -157,11 +161,8 @@ async def ask_next_disc_question(message: types.Message, state: FSMContext):
     
     text = f"Вопрос {qidx + 1}/{len(texts.DISC_QUESTIONS)}\n<b>{q['text']}</b>"
     
-    # --- ИЗМЕНЕНИЕ ---
-    # Добавляем поясняющий текст для слайдера прямо в сообщение
     if qtype == "slider":
         text += f"\n\n<i>«{q['left']}» ↔ «{q['right']}»</i>"
-    # --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
     kb = None
     if qtype == "slider": kb = keyboards.slider_kb()
@@ -224,7 +225,8 @@ async def show_fun_result(message: types.Message, state: FSMContext):
         f"{result['description']}\n\n"
         f"{result['tip']}"
     )
-    await message.answer(result_message, reply_markup=keyboards.fun_result_kb(result['share']))
+    share_text = f"{result['share']} А какой у тебя? Пройди тест в боте «Неделя знаний Северсталь»!"
+    await message.answer(result_message, reply_markup=keyboards.fun_result_kb(share_text))
     
     uid = message.chat.id
     if not db.has_completed_day1(uid):
@@ -267,7 +269,6 @@ async def handle_fun_answer(callback: types.CallbackQuery, state: FSMContext):
 
     sel_idx = parse_idx(callback.data)
     
-    # Начисляем баллы
     for i, option in enumerate(q["options"]):
         archetype = option[1]
         if i == sel_idx:
@@ -279,6 +280,26 @@ async def handle_fun_answer(callback: types.CallbackQuery, state: FSMContext):
     await ask_next_fun_question(callback.message, state)
     await callback.answer()
     
+# ===== Inline-режим для "Поделиться" =====
+
+@router.inline_query()
+async def handle_inline_share(inline_query: InlineQuery):
+    query_text = inline_query.query
+    if not query_text:
+        return
+
+    result = InlineQueryResultArticle(
+        id=str(uuid.uuid4()),
+        title="Отправить результат",
+        description=query_text,
+        input_message_content=InputTextMessageContent(
+            message_text=query_text
+        ),
+        thumb_url="https://w7.pngwing.com/pngs/32/933/png-transparent-steel-industry-logo-severstal-industry-company-text-trademark.png",
+    )
+    
+    await inline_query.answer([result], cache_time=1)
+
 # ===== ДЕНЬ 2: КАРТОЧКИ =====
 
 async def start_day2(message: types.Message, state: FSMContext):
@@ -343,7 +364,7 @@ async def cmd_set_day(message: types.Message):
     if not is_admin(message.from_user.id): return
     args = message.text.split()
     if len(args) != 2 or not args[1].isdigit():
-        await message.answer("Использование: /setday <номер_дня>")
+        await message.answer("Использование: /setday &lt;номер_дня&gt;")
         return
         
     day = int(args[1])
