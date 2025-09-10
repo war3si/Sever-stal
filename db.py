@@ -1,7 +1,7 @@
 import sqlite3
 import json
 
-DB_FILE = 'db.sqlite'
+DB_FILE = "db.sqlite"  # Путь к базе данных
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -28,7 +28,7 @@ def get_user(user_id):
 def create_user(user_id, username):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO users (id, username) VALUES (?, ?)', (user_id, username))
+    cursor.execute('INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)', (user_id, username))
     conn.commit()
     conn.close()
 
@@ -43,7 +43,11 @@ def add_reward(user_id, reward):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute('SELECT rewards FROM users WHERE id = ?', (user_id,))
-    rewards = json.loads(cursor.fetchone()[0])
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return
+    rewards = json.loads(row[0])
     if reward not in rewards:
         rewards.append(reward)
     cursor.execute('UPDATE users SET rewards = ? WHERE id = ?', (json.dumps(rewards), user_id))
@@ -52,11 +56,12 @@ def add_reward(user_id, reward):
 
 def get_profile(user_id):
     user = get_user(user_id)
-    if user:
-        rewards = json.loads(user[3])
-        return {
-            'username': user[1],
-            'points': user[2],
-            'rewards': rewards
-        }
-    return None
+    if not user:
+        return None
+    rewards = json.loads(user[3]) if user[3] else []
+    return {
+        "id": user[0],
+        "username": user[1],
+        "points": user[2],
+        "rewards": rewards
+    }
