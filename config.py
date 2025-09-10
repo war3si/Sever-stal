@@ -1,12 +1,5 @@
-# config.py
-TOKEN = '8372038074:AAFCll2amU4RAXXwau6Ig2pSh5G1x2Y3AGI'  # Замени на токен от BotFather
-
-# Даты мероприятия (для 5 дней). Для теста используем фиктивные даты.
-# В реальности задай реальные даты, например, от '2025-09-01' до '2025-09-05'.
-EVENT_START_DATE = '2025-09-01'  # Формат YYYY-MM-DD
+TOKEN = "8372038074:AAFCll2amU4RAXXwau6Ig2pSh5G1x2Y3AGI"
+EVENT_START_DATE = '2025-09-01'
 EVENT_DAYS = 5
 
-# Для симуляции /nextday (виртуальный сдвиг дней)
-simulated_day_offset = 0  # Глобальная переменная для теста
-
-PODCAST_URL = "https://t.me/your_podcast_channel/1"
+PODCAST_URL = "https://t.me/SkittlyShit"
