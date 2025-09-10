@@ -561,3 +561,76 @@ async def finish_fun_test(message, state: FSMContext):
 
 # (добавляется по аналогии как отдельный блок после теста)
 
+from aiogram.filters import CommandObject
+
+# Список ID админов — замени на свои
+ADMINS = {1995633871}  # <== сюда свои Telegram ID
+
+def is_admin(user_id: int):
+    return user_id in ADMINS
+
+# Хранение текущего дня в памяти (для теста)
+current_day = 1
+
+@router.message(Command("addpoints"))
+async def cmd_add_points(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("Команда доступна только администраторам.")
+        return
+
+    args = message.text.split()
+    if len(args) != 3:
+        await message.answer("Использование: /addpoints <user_id> <points>")
+        return
+    try:
+        user_id = int(args[1])
+        points = int(args[2])
+    except ValueError:
+        await message.answer("Неверный формат аргументов. Должны быть числа.")
+        return
+
+    user = get_user(user_id)
+    if not user:
+        await message.answer("Пользователь не найден.")
+        return
+
+    update_points(user_id, points)
+    await message.answer(f"{points} баллов начислено пользователю {user_id}.")
+
+@router.message(Command("skipday"))
+async def cmd_skip_day(message: types.Message):
+    global current_day
+    if not is_admin(message.from_user.id):
+        await message.answer("Команда доступна только администраторам.")
+        return
+    if current_day < EVENT_DAYS:
+        current_day += 1
+        await message.answer(f"Переход на следующий день: День {current_day}")
+    else:
+        await message.answer("Максимальный день уже достигнут.")
+
+@router.message(Command("setday"))
+async def cmd_set_day(message: types.Message):
+    global current_day
+    if not is_admin(message.from_user.id):
+        await message.answer("Команда доступна только администраторам.")
+        return
+    args = message.text.split()
+    if len(args) != 2:
+        await message.answer("Использование: /setday <номер_дня>")
+        return
+    try:
+        day = int(args[1])
+    except ValueError:
+        await message.answer("День должен быть числом.")
+        return
+    if 1 <= day <= EVENT_DAYS:
+        current_day = day
+        await message.answer(f"Текущий день установлен на {current_day}.")
+    else:
+        await message.answer(f"День должен быть в диапазоне от 1 до {EVENT_DAYS}.")
+
+@router.message(Command("resetdb"))
+async def cmd_reset_db(message: types.Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("Команда доступна только администра")
