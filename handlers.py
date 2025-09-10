@@ -386,4 +386,4 @@ async def handle_assoc_q(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message()
 async def unknown_message(message: types.Message):
-    await message.answer("Команда не распознана. Используйте меню или /help.")
+    await message.answer("Команда не распознана. Используйте меню или /help.") 
