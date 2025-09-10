@@ -2,7 +2,7 @@
 from db import DB_FILE
 
 
-TOKEN = "8372038074:AAFCll2amU4RAXXwau6Ig2pSh5G1x2Y3AGI"
+TOKEN = "8372038074:AAGWTC0ExZuTFVQvKkoqoPyxKnbCJ8IuOEU"
 
 # Количество дней мероприятия или теста
 EVENT_DAYS = 5

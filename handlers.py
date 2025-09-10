@@ -4,7 +4,8 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from config import EVENT_DAYS, ADMINS
-from db import get_user, update_points, get_profile
+# Обновляем импорты из db.py
+from db import get_user, update_points, get_profile, create_user, has_completed_day1, mark_day1_completed
 from texts import DISC_QUESTIONS
 from commands import USER_COMMANDS_TEXT, ADMIN_COMMANDS_TEXT
 from states import Day1States
@@ -41,17 +42,14 @@ def back_to_menu_inline() -> types.InlineKeyboardMarkup:
 async def to_main_menu(message: types.Message):
     await message.answer("Главное меню.", reply_markup=main_menu_kb())
 
-# Ограничение попыток — подключите к БД при необходимости
-def db_has_completed_day1(user_id: int) -> bool:
-    return False
-
-def db_mark_completed_day1(user_id: int) -> None:
-    pass
+# УБРАЛИ СТАРЫЕ ФУНКЦИИ-ЗАГЛУШКИ
 
 # ===== Команды =====
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
+    # ДОБАВИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
+    create_user(message.from_user.id, message.from_user.username)
     await message.answer(
         "Привет! Это бот «Неделя знаний Северсталь». Нажмите «Начать день», чтобы перейти к активностям.",
         reply_markup=main_menu_kb()
@@ -82,10 +80,13 @@ async def btn_profile(message: types.Message):
 
 @router.message(F.text == "Начать день")
 async def btn_start_day(message: types.Message, state: FSMContext):
+    create_user(message.from_user.id, message.from_user.username)
+    
     day = current_day_global
     if day == 1:
         uid = message.from_user.id
-        if db_has_completed_day1(uid) and not is_admin(uid):
+        # ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ПРОВЕРКИ
+        if has_completed_day1(uid) and not is_admin(uid):
             await message.answer(
                 "Тест дня 1 уже пройден. Повторное прохождение доступно только администраторам.",
                 reply_markup=back_to_menu_inline()
@@ -117,15 +118,19 @@ async def cmd_set_day(message: types.Message):
     if not is_admin(message.from_user.id):
         await message.answer("Только для админов.")
         return
+    
     args = message.text.split()
+    
     if len(args) != 2:
         await message.answer("Использование: /setday <номер_дня>")
         return
+        
     try:
-        day = int(args[20])
+        day = int(args[1])
     except ValueError:
         await message.answer("День должен быть числом.")
         return
+        
     global current_day_global
     if 1 <= day <= EVENT_DAYS:
         current_day_global = day
@@ -139,8 +144,7 @@ def disc_slider_scores(pos: int, cat_l: str, cat_r: str) -> dict[str, int]:
     return {cat_l: 6 - pos, cat_r: pos}
 
 def disc_mc_scores(selected: int, options: list[tuple[str, str]]) -> dict[str, int]:
-    # options: [(text, cat), ...]
-    cats = [opt[20] for opt in options]
+    cats = [opt[1] for opt in options]
     scores = {c: 1 for c in cats}
     scores[cats[selected]] += 4
     return scores
@@ -160,7 +164,6 @@ async def delete_previous_question_message(message: types.Message, state: FSMCon
             logging.debug(f"Не удалось удалить предыдущее сообщение вопроса: {e}")
 
 async def ask_next_disc_question(message: types.Message, state: FSMContext):
-    # Проматываем невалидные карточки, показываем ОДИН валидный вопрос и выходим
     while True:
         data = await state.get_data()
         qidx = data.get("disc_q", 0)
@@ -170,10 +173,12 @@ async def ask_next_disc_question(message: types.Message, state: FSMContext):
         if qidx >= len(DISC_QUESTIONS):
             uid = message.from_user.id
             try:
-                db_mark_completed_day1(uid)
+                # ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ДЛЯ ОТМЕТКИ
+                mark_day1_completed(uid)
             except Exception as e:
                 logging.warning(f"Не удалось пометить завершение теста: {e}")
             try:
+                # Теперь эта проверка будет работать, так как юзер создан
                 if get_user(uid):
                     update_points(uid, 10)
             except Exception as e:
@@ -215,7 +220,7 @@ async def ask_next_disc_question(message: types.Message, state: FSMContext):
                 [types.InlineKeyboardButton(text=f"{q['right']} (5)", callback_data="slider:5")],
             ])
         elif qtype == "mc":
-            option_texts = [opt for opt in q["options"]]
+            option_texts = [opt[0] for opt in q["options"]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                 [types.InlineKeyboardButton(text=t, callback_data=f"mc:{i}") for i, t in enumerate(option_texts)]
             ])
@@ -243,7 +248,8 @@ def parse_idx(cb_data: str) -> int | None:
 @router.callback_query(F.data == "day1:serious")
 async def start_day1_serious(callback: types.CallbackQuery, state: FSMContext):
     uid = callback.from_user.id
-    if db_has_completed_day1(uid) and not is_admin(uid):
+    # ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ПРОВЕРКИ
+    if has_completed_day1(uid) and not is_admin(uid):
         await callback.message.answer(
             "Тест дня 1 уже пройден. Повторное прохождение доступно только администраторам.",
             reply_markup=back_to_menu_inline()
@@ -386,4 +392,4 @@ async def handle_assoc_q(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message()
 async def unknown_message(message: types.Message):
-    await message.answer("Команда не распознана. Используйте меню или /help.") 
+    await message.answer("Команда не распознана. Используйте меню или /help.")
